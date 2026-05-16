@@ -12,7 +12,7 @@ export function Hero() {
         <div className="lg:col-span-6 flex flex-col justify-center">
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground shadow-soft">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            Kiva: Notre plateforme d'accompagnement agricole & artisanal
+            Kiva: Notre plateforme d'accompagnement agricole & artisanal, Bien
           </span>
           <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.05] tracking-tight text-balance md:text-6xl lg:text-7xl">
             Cultiver, créer,{" "}
