@@ -220,14 +220,14 @@ export function ProductForm({ id, embed, onSaved, onCancel }: Props) {
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Pack Maraîchage Démarrage" />
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label>Slug (URL)</Label>
             <Input
               value={slug}
               onChange={(e) => { setSlug(slugify(e.target.value)); setSlugTouched(true); }}
               placeholder="pack-marachage-demarrage"
             />
-          </div>
+          </div> */}
 
           <div className="space-y-2">
             <Label>Description courte</Label>
