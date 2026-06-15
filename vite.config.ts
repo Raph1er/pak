@@ -5,7 +5,12 @@ export default defineConfig(async () => {
 
   return {
     cloudflare: false,
-    plugins: [nitro({ preset: "netlify" })],
+    plugins: [
+      nitro({ 
+        preset: "netlify",
+        serverDir: "src/server" // 👈 AJOUTE CETTE LIGNE
+      })
+    ],
     tanstackStart: {
       server: { entry: "server" },
     },

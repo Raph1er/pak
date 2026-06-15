@@ -34,14 +34,44 @@ function LoginPage() {
       return;
     }
     setLoading(true);
+    
+    // 1. Connexion Supabase
     const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
-    setLoading(false);
+    
     if (error) {
+      setLoading(false);
       toast.error(error.message === "Invalid login credentials" ? "Identifiants invalides" : error.message);
       return;
     }
+
+    const userId = data.user?.id;
+    if (!userId) {
+      setLoading(false);
+      toast.error("Impossible de récupérer l'utilisateur");
+      return;
+    }
+
+    // 2. 👇 VÉRIFICATION CRITIQUE : L'email est-il confirmé ?
+   const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("email_verified")
+      .eq("id", userId)
+      .single();
+
+    // Si erreur ou pas de vérification trouvée, l'email n'est pas confirmé
+       if (profileError || !profile || !profile.email_verified) {
+      // Déconnecter l'utilisateur immédiatement
+      await supabase.auth.signOut();
+      setLoading(false);
+      toast.error("Veuillez vérifier votre email avant de vous connecter");
+      navigate({ to: "/verify-pending", search: { email: parsed.data.email } });
+      return;
+    }
+
+    // 3. Email confirmé, on peut continuer
+    setLoading(false);
     toast.success("Connexion réussie");
-    const destination = await getPostAuthDestination(data.session?.user.id ?? data.user?.id);
+    const destination = await getPostAuthDestination(userId);
     navigate({ to: destination, replace: true });
   };
 

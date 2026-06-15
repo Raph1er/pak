@@ -30,6 +30,19 @@ function SignupPage() {
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((s) => ({ ...s, [k]: e.target.value }));
 
+  const sendVerificationEmail = async (email: string, token: string, firstName: string) => {
+    // Appel à votre API d'envoi d'email (Edge Function, Resend, etc.)
+    const response = await fetch('/api/send-verification-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, token, firstName })
+    });
+    
+    if (!response.ok) {
+      throw new Error("Erreur lors de l'envoi de l'email");
+    }
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const parsed = schema.safeParse(form);
@@ -37,12 +50,20 @@ function SignupPage() {
       toast.error(parsed.error.issues[0].message);
       return;
     }
+    
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+
+const { data: { session } } = await supabase.auth.getSession();
+if (session) {
+  await supabase.auth.signOut();
+}
+    
+    // 1. Créer l'utilisateur dans Supabase Auth (sans auto-confirmation)
+    const { data, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/verify-email`,
         data: {
           first_name: parsed.data.firstName,
           last_name: parsed.data.lastName,
@@ -50,13 +71,57 @@ function SignupPage() {
         },
       },
     });
-    setLoading(false);
+    
     if (error) {
-      toast.error(error.message.includes("already") ? "Email déjà utilisé" : error.message);
+      setLoading(false);
+      toast.error(
+        error.message.includes("already")
+          ? "Email déjà utilisé"
+          : error.message
+      );
       return;
     }
-    toast.success("Compte créé. Vérifiez votre email pour confirmer.");
-    navigate({ to: "/login" });
+
+    const userId = data.user?.id;
+    if (!userId) {
+      setLoading(false);
+      toast.error("Impossible de récupérer l'utilisateur créé");
+      return;
+    }
+
+    // 2. Créer un token de vérification
+const token = crypto.randomUUID(); 
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    // 3. Insérer dans email_verifications
+    const { error: verificationError } = await supabase
+      .from("email_verifications")
+      .insert({
+        user_id: userId,
+        token,
+        expires_at: expiresAt,
+        verified: false,
+      });
+
+    if (verificationError) {
+      setLoading(false);
+      toast.error("Erreur lors de la création du token de vérification.");
+      console.error(verificationError);
+      return;
+    }
+
+    // 4. Envoyer l'email de vérification
+    try {
+      await sendVerificationEmail(parsed.data.email, token, parsed.data.firstName);
+      toast.success("Compte créé ! Vérifiez vos emails pour confirmer votre adresse.");
+      navigate({ to: "/verify-pending", search: { email: parsed.data.email } });
+    } catch (emailError) {
+      console.error("Erreur d'envoi d'email:", emailError);
+      toast.warning("Compte créé mais l'email n'a pas pu être envoyé. Contactez le support.");
+      navigate({ to: "/login" });
+    }
+    
+    setLoading(false);
   };
 
   return (
@@ -83,7 +148,7 @@ function SignupPage() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="phone">Téléphone</Label>
-          <Input id="phone" type="tel" required value={form.phone} onChange={set("phone")} placeholder="+221 ..." />
+          <Input id="phone" type="tel" required value={form.phone} onChange={set("phone")} placeholder="+229 01 56 90 41 09" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>

@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyPendingRouteImport } from './routes/verify-pending'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProcessRouteImport } from './routes/process'
@@ -28,6 +30,16 @@ import { Route as AuthenticatedAdminCatalogRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminCatalogNewRouteImport } from './routes/_authenticated/admin.catalog.new'
 import { Route as AuthenticatedAdminCatalogIdRouteImport } from './routes/_authenticated/admin.catalog.$id'
 
+const VerifyPendingRoute = VerifyPendingRouteImport.update({
+  id: '/verify-pending',
+  path: '/verify-pending',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -133,6 +145,8 @@ export interface FileRoutesByFullPath {
   '/process': typeof ProcessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/verify-pending': typeof VerifyPendingRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/catalog/$slug': typeof CatalogSlugRoute
@@ -152,6 +166,8 @@ export interface FileRoutesByTo {
   '/process': typeof ProcessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/verify-pending': typeof VerifyPendingRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/catalog/$slug': typeof CatalogSlugRoute
@@ -173,6 +189,8 @@ export interface FileRoutesById {
   '/process': typeof ProcessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/verify-pending': typeof VerifyPendingRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/catalog/$slug': typeof CatalogSlugRoute
@@ -194,6 +212,8 @@ export interface FileRouteTypes {
     | '/process'
     | '/reset-password'
     | '/signup'
+    | '/verify-email'
+    | '/verify-pending'
     | '/admin'
     | '/dashboard'
     | '/catalog/$slug'
@@ -213,6 +233,8 @@ export interface FileRouteTypes {
     | '/process'
     | '/reset-password'
     | '/signup'
+    | '/verify-email'
+    | '/verify-pending'
     | '/admin'
     | '/dashboard'
     | '/catalog/$slug'
@@ -233,6 +255,8 @@ export interface FileRouteTypes {
     | '/process'
     | '/reset-password'
     | '/signup'
+    | '/verify-email'
+    | '/verify-pending'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/catalog/$slug'
@@ -254,11 +278,27 @@ export interface RootRouteChildren {
   ProcessRoute: typeof ProcessRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
+  VerifyPendingRoute: typeof VerifyPendingRoute
   CatalogSlugRoute: typeof CatalogSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-pending': {
+      id: '/verify-pending'
+      path: '/verify-pending'
+      fullPath: '/verify-pending'
+      preLoaderRoute: typeof VerifyPendingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -444,6 +484,8 @@ const rootRouteChildren: RootRouteChildren = {
   ProcessRoute: ProcessRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
+  VerifyPendingRoute: VerifyPendingRoute,
   CatalogSlugRoute: CatalogSlugRoute,
 }
 export const routeTree = rootRouteImport
