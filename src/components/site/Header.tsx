@@ -12,11 +12,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // ✅ Ajout de AvatarImage
 
 export function Header() {
   const [open, setOpen] = useState(false);
   const [unreadContactCount, setUnreadContactCount] = useState<number>(0);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null); // ✅ Nouveau state pour l'avatar
   const { isAuthenticated, user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const closeMenu = () => setOpen(false);
@@ -38,6 +39,39 @@ export function Header() {
 
   const initials =
     ((user?.user_metadata?.first_name as string)?.[0] ?? user?.email?.[0] ?? "K").toUpperCase();
+
+  // ✅ Récupérer l'avatar de l'utilisateur
+  useEffect(() => {
+    let active = true;
+    
+    if (!isAuthenticated || !user?.id) {
+      setAvatarUrl(null);
+      return;
+    }
+
+    const fetchAvatar = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", user.id)
+        .single();
+
+      if (!active) return;
+      
+      if (error) {
+        console.error("Erreur récupération avatar:", error);
+        setAvatarUrl(null);
+      } else {
+        setAvatarUrl(data?.avatar_url || null);
+      }
+    };
+
+    fetchAvatar();
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, user?.id]);
 
   useEffect(() => {
     let active = true;
@@ -106,11 +140,15 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full border border-border bg-card px-2 py-1 pr-3 text-sm shadow-soft hover:bg-muted">
                   <Avatar className="h-7 w-7">
+                    {/* ✅ Afficher l'image si elle existe */}
+                    {avatarUrl && (
+                      <AvatarImage src={avatarUrl} alt={user?.user_metadata?.first_name || "Avatar"} />
+                    )}
                     <AvatarFallback className="bg-gradient-hero text-xs text-primary-foreground">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="max-w-[160px] truncate">{user?.email}</span>
+                  <span className="max-w-[160px] truncate">{user?.user_metadata?.first_name || user?.email}</span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -189,7 +227,6 @@ export function Header() {
                   {isAdmin && (
                     <>
                       <Link to="/admin/messages" onClick={closeMenu} className="rounded-md px-3 py-2 text-sm hover:bg-muted">Messages</Link>
-                      {/* <Link to="/admin" onClick={closeMenu} className="rounded-md px-3 py-2 text-sm hover:bg-muted">Espace admin</Link> */}
                     </>
                   )}
                   <Button variant="outline" className="mt-2" onClick={handleLogout}>Se déconnecter</Button>
