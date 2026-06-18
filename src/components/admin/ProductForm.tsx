@@ -50,6 +50,23 @@ export function ProductForm({ id, embed, onSaved, onCancel }: Props) {
   const [featured, setFeatured] = useState(false);
   const [published, setPublished] = useState(true);
   const [items, setItems] = useState<ItemDraft[]>([]);
+  const [pricingMode, setPricingMode] = useState<"simple" | "installment">("simple");
+  const [priceUpfront, setPriceUpfront] = useState<string>("");
+  const [priceMonthly, setPriceMonthly] = useState<string>("");
+
+  // Auto-calculate monthly price based on total - upfront divided by months
+  useEffect(() => {
+    if (pricingMode === "installment" && durationMonths && priceUpfront && priceXof) {
+      const total = parseInt(priceXof, 10) || 0;
+      const upfront = parseInt(priceUpfront, 10) || 0;
+      const months = parseInt(durationMonths, 10) || 1;
+
+      if (months > 0 && total > upfront) {
+        const monthly = Math.round((total - upfront) / months);
+        setPriceMonthly(String(Math.max(0, monthly)));
+      }
+    }
+  }, [pricingMode, priceXof, priceUpfront, durationMonths]);
 
   useEffect(() => {
     if (!id) return;
@@ -69,6 +86,13 @@ export function ProductForm({ id, embed, onSaved, onCancel }: Props) {
         setImageUrl(product.image_url ?? "");
         setFeatured(product.featured);
         setPublished(product.published);
+        if (product.price_upfront && product.price_monthly) {
+          setPricingMode("installment");
+          setPriceUpfront(String(product.price_upfront));
+          setPriceMonthly(String(product.price_monthly));
+        } else {
+          setPricingMode("simple");
+        }
       }
       const { data: it } = await supabase
         .from("product_items").select("*").eq("product_id", id).order("position");
@@ -110,26 +134,41 @@ export function ProductForm({ id, embed, onSaved, onCancel }: Props) {
       return;
     }
     setSaving(true);
-    const payload = {
+
+    const basePayload = {
       type,
       title,
       slug,
       category,
       short_description: shortDescription || null,
       description: description || null,
-      price_xof: parseInt(priceXof, 10) || 0,
-      duration_months: durationMonths ? parseInt(durationMonths, 10) : null,
       image_url: imageUrl || null,
       featured,
       published,
     };
 
+    const payload = pricingMode === "simple"
+      ? {
+        ...basePayload,
+        price_xof: parseInt(priceXof, 10) || 0,
+        price_upfront: null,
+        price_monthly: null,
+        duration_months: null,
+      }
+      : {
+        ...basePayload,
+        price_xof: parseInt(priceXof, 10) || 0,
+        price_upfront: parseInt(priceUpfront, 10) || 0,
+        price_monthly: parseInt(priceMonthly, 10) || 0,
+        duration_months: durationMonths ? parseInt(durationMonths, 10) : null,
+      };
+
     let productId = id;
     if (isEdit) {
-      const { error } = await supabase.from("products").update(payload).eq("id", id!);
+      const { error } = await supabase.from("products").update(payload as any).eq("id", id!);
       if (error) { toast.error(error.message); setSaving(false); return; }
     } else {
-      const { data, error } = await supabase.from("products").insert(payload).select("id").single();
+      const { data, error } = await supabase.from("products").insert(payload as any).select("id").single();
       if (error) { toast.error(error.message); setSaving(false); return; }
       productId = data.id;
     }
@@ -169,6 +208,9 @@ export function ProductForm({ id, embed, onSaved, onCancel }: Props) {
         setFeatured(false);
         setPublished(true);
         setItems([]);
+        setPricingMode("simple");
+        setPriceUpfront("");
+        setPriceMonthly("");
       }
       return;
     }
@@ -239,15 +281,59 @@ export function ProductForm({ id, embed, onSaved, onCancel }: Props) {
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={5} />
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Prix (FCFA)</Label>
-              <Input type="number" min="0" value={priceXof} onChange={(e) => setPriceXof(e.target.value)} />
+              <Label>Mode de paiement</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="pricing" value="simple" checked={pricingMode === "simple"} onChange={() => setPricingMode("simple")} className="h-4 w-4" />
+                  <span className="text-sm font-medium">Prix unique</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="pricing" value="installment" checked={pricingMode === "installment"} onChange={() => setPricingMode("installment")} className="h-4 w-4" />
+                  <span className="text-sm font-medium">Paiement échelonné</span>
+                </label>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Durée d'accompagnement (mois)</Label>
-              <Input type="number" min="0" value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} />
-            </div>
+
+            {pricingMode === "simple" ? (
+              <div className="space-y-2">
+                <Label>Prix total (FCFA)</Label>
+                <Input type="number" min="0" value={priceXof} onChange={(e) => setPriceXof(e.target.value)} placeholder="50000" />
+              </div>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Prix total (FCFA)</Label>
+                  <Input type="number" min="0" value={priceXof} onChange={(e) => setPriceXof(e.target.value)} placeholder="50000" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Acompte (FCFA)</Label>
+                  <Input type="number" min="0" value={priceUpfront} onChange={(e) => setPriceUpfront(e.target.value)} placeholder="20000" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Durée (mois)</Label>
+                  <Input type="number" min="0" value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} placeholder="12" />
+                </div>
+                <div className="space-y-2 md:col-span-3 rounded-lg border border-border/60 bg-muted/30 p-4">
+                  <div className="text-sm font-medium text-muted-foreground">Résumé du paiement</div>
+                  <div className="grid gap-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Acompte :</span>
+                      <span className="font-medium">{priceUpfront ? `${parseInt(priceUpfront, 10).toLocaleString("fr-FR")} FCFA` : "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Prix/mois :</span>
+                      <span className="font-medium">{priceMonthly ? `${parseInt(priceMonthly, 10).toLocaleString("fr-FR")} FCFA` : "—"} × {durationMonths || "?"} mois</span>
+                    </div>
+                    <div className="border-t border-border/60 pt-2 flex justify-between font-semibold">
+                      <span>Total :</span>
+                      <span className="text-primary">{priceXof ? `${parseInt(priceXof, 10).toLocaleString("fr-FR")} FCFA` : "—"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

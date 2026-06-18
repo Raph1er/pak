@@ -12,6 +12,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { formatXOF } from "@/lib/catalog";
 import type { ProductRow } from "@/lib/catalog";
 
 const schema = z.object({
@@ -100,6 +101,30 @@ export function RequestDialog({ product, open, onOpenChange }: Props) {
           <DialogTitle>Faire une demande</DialogTitle>
           <DialogDescription>{product.title}</DialogDescription>
         </DialogHeader>
+        <div className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-2">
+          {product.price_upfront && product.price_monthly ? (
+            <>
+              <div className="text-sm text-muted-foreground">Paiement échelonné</div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm font-medium">Acompte :</span>
+                <span className="font-display font-semibold text-primary">{formatXOF(product.price_upfront)}</span>
+              </div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm font-medium">Puis :</span>
+                <span className="font-display font-semibold text-primary">{formatXOF(product.price_monthly)}/mois × {product.duration_months} mois</span>
+              </div>
+              <div className="pt-2 border-t border-border/60 flex justify-between items-baseline">
+                <span className="text-sm font-medium">Total :</span>
+                <span className="font-display font-semibold text-primary">{formatXOF(product.price_xof)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between items-baseline">
+              <span className="text-sm font-medium">Prix :</span>
+              <span className="font-display font-semibold text-primary">{formatXOF(product.price_xof)}</span>
+            </div>
+          )}
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

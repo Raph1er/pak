@@ -143,7 +143,7 @@ function ProductDetailPage() {
               <Badge variant="outline" className="gap-1">
                 <Tag className="h-3 w-3" /> {product.category}
               </Badge>
-              {product.duration_months && (
+              {product.price_upfront && product.price_monthly && product.duration_months && (
                 <Badge variant="outline" className="gap-1">
                   <Calendar className="h-3 w-3" /> {product.duration_months} mois
                 </Badge>
@@ -157,12 +157,84 @@ function ProductDetailPage() {
               <p className="mt-4 text-lg text-muted-foreground">{product.short_description}</p>
             )}
 
-            <div className="mt-6 flex items-baseline gap-3">
-              <span className="font-display text-3xl font-semibold text-primary">
-                {formatXOF(product.price_xof)}
-              </span>
-              <span className="text-sm text-muted-foreground">à partir de</span>
-            </div>
+{product.price_upfront && product.price_monthly && product.duration_months ? (
+  <div className="mt-6 space-y-4 rounded-2xl border border-border/60 bg-muted/5 p-6">
+    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+      <Calendar className="h-4 w-4" />
+      Paiement échelonné
+    </div>
+    
+    <div className="space-y-3">
+      {/* Prix total */}
+      <div className="flex items-baseline justify-between border-b border-border/40 pb-3">
+        <span className="text-sm text-muted-foreground">Prix total</span>
+        <span className="font-display text-2xl font-semibold text-primary">
+          {formatXOF(product.price_xof)}
+        </span>
+      </div>
+
+      {/* Paiement initial - BLEU */}
+      <div className="flex items-baseline justify-between rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30">
+        <div>
+          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Paiement initial</span>
+          <p className="text-xs text-blue-600/70 dark:text-blue-400/70">À payer avant la livraison</p>
+        </div>
+        <span className="font-display text-xl font-semibold text-blue-600 dark:text-blue-400">
+          {formatXOF(product.price_upfront)}
+        </span>
+      </div>
+
+      {/* Mensualités - JAUNE */}
+      <div className="flex items-baseline justify-between rounded-lg bg-amber-50 p-3 dark:bg-amber-950/30">
+        <div>
+          <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Mensualités</span>
+          <p className="text-xs text-amber-600/70 dark:text-amber-400/70">À payer après la livraison</p>
+        </div>
+        <div className="text-right">
+          <span className="font-display text-xl font-semibold text-amber-600 dark:text-amber-400">
+            {formatXOF(product.price_monthly)}
+          </span>
+          <span className="ml-1 text-sm text-amber-600/70 dark:text-amber-400/70">/mois</span>
+        </div>
+      </div>
+
+      {/* Durée */}
+      <div className="flex items-baseline justify-between border-t border-border/40 pt-3">
+        <span className="text-sm text-muted-foreground">Durée du paiement</span>
+        <span className="font-medium">
+          {product.duration_months} {product.duration_months === 1 ? 'mois' : 'mois'}
+        </span>
+      </div>
+    </div>
+
+    {/* Récapitulatif visuel */}
+    <div className="mt-4 rounded-xl bg-primary/5 p-4">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Total à payer</span>
+        <span className="font-semibold">{formatXOF(product.price_xof)}</span>
+      </div>
+      <div className="mt-1 flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Dont à la commande</span>
+        <span className="font-medium text-blue-600 dark:text-blue-400">{formatXOF(product.price_upfront)}</span>
+      </div>
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Dont en {product.duration_months} mensualités</span>
+        <span className="font-medium text-amber-600 dark:text-amber-400">
+          {formatXOF((product.price_monthly || 0) * (product.duration_months || 0))}
+        </span>
+      </div>
+    </div>
+  </div>
+) : (
+  <div className="mt-6">
+    <div className="flex items-baseline gap-3">
+      <span className="font-display text-3xl font-semibold text-primary">
+        {formatXOF(product.price_xof)}
+      </span>
+      <span className="text-sm text-muted-foreground">Paiement unique</span>
+    </div>
+  </div>
+)}
 
             {!isAdmin && (
               <div className="mt-8 space-y-4">

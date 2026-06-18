@@ -151,7 +151,16 @@ function AdminCatalogPage() {
                       <Badge variant="secondary">{p.type === "pack" ? "Pack" : "Kit"}</Badge>
                     </TableCell>
                     <TableCell>{p.category}</TableCell>
-                    <TableCell>{formatXOF(p.price_xof)}</TableCell>
+                    <TableCell>
+                      {p.price_upfront && p.price_monthly ? (
+                        <div className="space-y-1">
+                          <div className="text-sm">{formatXOF(p.price_upfront)} acompte</div>
+                          <div className="text-xs text-muted-foreground">{formatXOF(p.price_monthly)}/m × {p.duration_months}m</div>
+                        </div>
+                      ) : (
+                        formatXOF(p.price_xof)
+                      )}
+                    </TableCell>
                     <TableCell>
                       {p.published ? (
                         <Badge className="bg-primary/15 text-primary hover:bg-primary/20">Publié</Badge>

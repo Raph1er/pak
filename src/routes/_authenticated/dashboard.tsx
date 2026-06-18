@@ -183,9 +183,20 @@ function Dashboard() {
                             <Package className="h-4 w-4" /> Quantité : <strong className="text-foreground">{r.quantity}</strong>
                           </div>
                           {r.products && (
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">{formatXOF(r.products.price_xof * r.quantity)}</span>
-                            </div>
+                            r.products.price_upfront && r.products.price_monthly ? (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-foreground">{formatXOF(r.products.price_upfront * r.quantity)} acompte</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {formatXOF(r.products.price_monthly * r.quantity)}/m × {r.products.duration_months}m
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground">{formatXOF(r.products.price_xof * r.quantity)}</span>
+                              </div>
+                            )
                           )}
                           {r.desired_date && (
                             <div className="flex items-center gap-2">

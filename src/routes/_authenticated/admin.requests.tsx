@@ -232,9 +232,20 @@ function AdminRequestsPage() {
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       {r.products && (
-                        <span className="font-display text-lg font-semibold text-primary">
-                          {formatXOF(r.products.price_xof * r.quantity)}
-                        </span>
+                        r.products.price_upfront && r.products.price_monthly ? (
+                          <div className="space-y-1 text-right">
+                            <div className="font-display text-lg font-semibold text-primary">
+                              {formatXOF(r.products.price_upfront * r.quantity)} acompte
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {formatXOF(r.products.price_monthly * r.quantity)}/m × {r.products.duration_months}m
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="font-display text-lg font-semibold text-primary">
+                            {formatXOF(r.products.price_xof * r.quantity)}
+                          </span>
+                        )
                       )}
                       <Button size="sm" onClick={() => openEdit(r)}>Mettre à jour</Button>
                     </div>
