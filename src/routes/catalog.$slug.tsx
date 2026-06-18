@@ -240,7 +240,7 @@ function ProductDetailPage() {
               <div className="mt-8 space-y-4">
                 <div className="flex flex-wrap gap-3">
                   <Button size="lg" onClick={handleRequest} disabled={hasRequested}>
-                    Faire une demande
+                    Faire la demande
                   </Button>
                   <Button asChild size="lg" variant="outline">
                     <Link
