@@ -84,7 +84,7 @@ function Dashboard() {
           <div>
             <p className="text-sm font-medium text-primary">{isAdmin ? "Espace admin" : "Espace personnel"}</p>
             <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight md:text-5xl">
-              Bonjour, {name}.
+              Salut, {name}.
             </h1>
             <p className="mt-2 text-muted-foreground">
               {isAdmin ? "Suivez les statistiques et gérez les opérations." : "Suivez vos demandes et leur progression en temps réel."}

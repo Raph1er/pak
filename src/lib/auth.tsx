@@ -25,7 +25,7 @@ export async function getPostAuthDestination(userId?: string | null) {
   const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   const roles = (data ?? []).map((r) => r.role as Role);
 
-  return roles.includes("admin") ? "/dashboard" : "/";
+  return roles.includes("admin") ? "/dashboard" : "/dashboard";
 }
 
 function readSessionStartedAt() {
