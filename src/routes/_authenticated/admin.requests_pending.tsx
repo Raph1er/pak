@@ -162,7 +162,7 @@ function AdminPendingRequestsPage() {
                                                     {STATUS_LABEL[r.status]}
                                                 </Badge>
                                                 <span className="text-xs text-muted-foreground">
-                                                    #{r.id.slice(0, 8)}
+                                                   
                                                 </span>
                                             </div>
                                             <span className="text-xs text-muted-foreground whitespace-nowrap">

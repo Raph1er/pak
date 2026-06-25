@@ -172,7 +172,7 @@ function Dashboard() {
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge className={STATUS_COLOR[r.status]}>{STATUS_LABEL[r.status]}</Badge>
                           <span className="text-xs text-muted-foreground">
-                            Demande #{r.id.slice(0, 8)} · créée le {formatDate(r.created_at)}
+                            Demande  · créée le {formatDate(r.created_at)}
                           </span>
                         </div>
                         <h3 className="mt-3 font-display text-xl font-semibold">

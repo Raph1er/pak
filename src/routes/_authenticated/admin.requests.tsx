@@ -215,7 +215,7 @@ function AdminRequestsPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge className={STATUS_COLOR[r.status]}>{STATUS_LABEL[r.status]}</Badge>
                         <span className="text-xs text-muted-foreground">
-                          #{r.id.slice(0, 8)} · {formatDateTime(r.created_at)}
+                          · {formatDateTime(r.created_at)}
                         </span>
                       </div>
                       <h3 className="font-display text-lg font-semibold">
