@@ -12,7 +12,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Upload, X, User, ArrowLeft, Save, Camera, Plus, Edit2, Trash2, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Upload, X, User, ArrowLeft, Save, Camera, Plus, Edit2, Trash2, Users, ChevronRight } from "lucide-react";
 
 // Types pour les membres de famille
 interface FamilyMember {
@@ -47,6 +67,7 @@ const schema = z.object({
   neighborhood: z.string().trim().min(1, "Quartier requis").max(100),
   address: z.string().trim().min(1, "Adresse détaillée requise").max(200),
 });
+
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Mon profil — KIVA" }] }),
   component: ProfilePage,
@@ -76,7 +97,7 @@ function ProfilePage() {
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
 
-    const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [memberForm, setMemberForm] = useState({
@@ -128,7 +149,6 @@ function ProfilePage() {
         if (data) {
           setProfileId(data.id);
 
-          // Extraire l'arrondissement et le quartier depuis neighborhood
           const neighborhoodParts = (data.neighborhood || "").split(", ");
           const arrondissement = neighborhoodParts[0] || "";
           const quartier = neighborhoodParts.slice(1).join(", ") || "";
@@ -185,20 +205,17 @@ function ProfilePage() {
     }
   }, [form.city, form.department]);
 
+  const set =
+    (k: keyof typeof form) =>
+    (
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) =>
+      setForm((s) => ({
+        ...s,
+        [k]: e.target.value,
+      }));
 
-
-const set =
-  (k: keyof typeof form) =>
-  (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) =>
-    setForm((s) => ({
-      ...s,
-      [k]: e.target.value,
-    }));
-
-
-      // Charger les membres de famille
+  // Charger les membres de famille
   useEffect(() => {
     if (!user?.id) return;
 
@@ -243,6 +260,7 @@ const set =
       setMemberArrondissements([]);
     }
   }, [memberForm.city, memberForm.department]);
+
   // Gestion du fichier avatar
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -280,14 +298,13 @@ const set =
       const fileName = `${userId}/${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      // Supprimer l'ancien avatar s'il existe
       if (currentAvatarUrl) {
         const oldPath = currentAvatarUrl.split('/').pop();
         if (oldPath) {
           await supabase.storage
             .from('avatars')
             .remove([`avatars/${userId}/${oldPath}`])
-            .catch(() => { }); // Ignorer les erreurs de suppression
+            .catch(() => { });
         }
       }
 
@@ -314,7 +331,7 @@ const set =
     }
   };
 
-    // Upload de l'avatar d'un membre vers Supabase Storage
+  // Upload de l'avatar d'un membre vers Supabase Storage
   const uploadMemberAvatar = async (userId: string, memberId: string, file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
@@ -348,14 +365,13 @@ const set =
     if (!oldAvatarUrl) return;
     
     try {
-      // Extraire le chemin du fichier depuis l'URL
       const urlParts = oldAvatarUrl.split('/avatars/');
       if (urlParts.length > 1) {
         const filePath = urlParts[1];
         await supabase.storage
           .from('avatars')
           .remove([filePath])
-          .catch(() => {}); // Ignorer les erreurs
+          .catch(() => {});
       }
     } catch (error) {
       console.error("Erreur suppression ancien avatar membre:", error);
@@ -392,7 +408,7 @@ const set =
     setMemberAvatarPreview(currentMemberAvatarUrl);
   }; 
 
-    const setMember = (k: keyof typeof memberForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const setMember = (k: keyof typeof memberForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setMemberForm((s) => ({ ...s, [k]: e.target.value }));
 
   const handleAddMember = () => {
@@ -413,7 +429,6 @@ const set =
       address: "",
       relationship: "",
     });
-    // Réinitialiser l'avatar
     setMemberAvatarFile(null);
     setMemberAvatarPreview(null);
     setCurrentMemberAvatarUrl(null);
@@ -438,7 +453,6 @@ const set =
       address: member.address || "",
       relationship: member.relationship,
     });
-    // Charger l'avatar actuel
     setCurrentMemberAvatarUrl(member.avatar_url || null);
     setMemberAvatarPreview(member.avatar_url || null);
     setMemberAvatarFile(null);
@@ -470,18 +484,15 @@ const set =
 
     setSavingMember(true);
 
-    // Gérer l'upload de l'avatar
     let avatarUrl = currentMemberAvatarUrl;
     
     if (memberAvatarFile) {
-      // Si un nouveau fichier est sélectionné, l'uploader
       const tempId = editingMemberId || `temp_${Date.now()}`;
       avatarUrl = await uploadMemberAvatar(user.id, tempId, memberAvatarFile);
       
       if (!avatarUrl) {
         toast.warning("Le membre a été sauvegardé mais la photo n'a pas pu être envoyée");
       } else if (editingMemberId && currentMemberAvatarUrl && currentMemberAvatarUrl !== avatarUrl) {
-        // Supprimer l'ancien avatar si on en a un nouveau
         await deleteOldMemberAvatar(currentMemberAvatarUrl);
       }
     }
@@ -503,14 +514,12 @@ const set =
 
     let error;
     if (editingMemberId) {
-      // Mise à jour
       const result = await supabase
         .from("family_members")
         .update(memberData)
         .eq("id", editingMemberId);
       error = result.error;
     } else {
-      // Création
       const result = await supabase
         .from("family_members")
         .insert([memberData]);
@@ -528,7 +537,6 @@ const set =
     toast.success(editingMemberId ? "Membre mis à jour" : "Membre ajouté avec succès");
     setShowMemberForm(false);
 
-    // Recharger les membres
     const { data } = await supabase
       .from("family_members")
       .select("*")
@@ -591,7 +599,6 @@ const set =
     setCurrentAvatarUrl(avatarUrl);
     setAvatarFile(null);
 
-    // Rafraîchir la page pour mettre à jour l'affichage
     setTimeout(() => {
       window.location.reload();
     }, 1000);
@@ -616,76 +623,116 @@ const set =
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="mx-auto max-w-3xl px-4 py-8 md:py-12">
-        <Button asChild variant="ghost" size="sm" className="mb-6 -ml-2">
+      <main className="mx-auto max-w-3xl px-3 sm:px-4 py-4 sm:py-8 lg:py-12">
+        {/* Back button */}
+        <Button asChild variant="ghost" size="sm" className="mb-4 sm:mb-6 -ml-2 sm:-ml-3">
           <Link to="/dashboard">
             <ArrowLeft className="h-4 w-4" />
-            Retour au tableau de bord
+            <span className="hidden sm:inline ml-1">Retour au tableau de bord</span>
+            <span className="sm:hidden ml-1">Retour</span>
           </Link>
         </Button>
 
-        <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-soft md:p-8">
-          <div className="mb-8 flex items-center justify-between">
-            <h1 className="font-display text-2xl font-semibold md:text-3xl">Mon profil</h1>
+        {/* Main card */}
+        <div className="rounded-2xl sm:rounded-3xl border border-border/60 bg-card p-4 sm:p-6 lg:p-8 shadow-soft">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-8">
+            <div className="flex items-center gap-3">
+              <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-semibold">Mon profil</h1>
+            </div>
             {isAdmin && (
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+              <Badge variant="secondary" className="text-xs sm:text-sm">
                 Administrateur
-              </span>
+              </Badge>
             )}
           </div>
 
-                   <form onSubmit={onSubmit} className="space-y-6">
+          {/* Formulaire */}
+          <form onSubmit={onSubmit} className="space-y-5 sm:space-y-6">
             {/* Avatar */}
             <div className="flex flex-col items-center">
               <div className="relative">
-                <Avatar className="h-40 w-40 md:h-52 md:w-52 rounded-full border-4 border-primary shadow-2xl">
+                <Avatar className="h-24 w-24 sm:h-32 sm:w-32 lg:h-40 lg:w-40 rounded-full border-4 border-primary shadow-xl">
                   <AvatarImage
                     src={avatarPreview || undefined}
                     alt={form.firstName || "Profil"}
                     className="object-cover"
                   />
-                  <AvatarFallback className="bg-gradient-hero text-4xl text-primary-foreground md:text-5xl">
+                  <AvatarFallback className="bg-gradient-hero text-2xl sm:text-3xl lg:text-4xl text-primary-foreground">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <div className="absolute bottom-2 right-2 h-5 w-5 rounded-full bg-green-500 border-2 border-white"></div>
+                
+                {/* Avatar upload button */}
+                <div className="absolute -bottom-1 -right-1">
+                  <Label htmlFor="avatar-upload" className="cursor-pointer">
+                    <div className="rounded-full bg-primary p-2 sm:p-2.5 shadow-lg hover:bg-primary/90 transition-colors">
+                      <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary-foreground" />
+                    </div>
+                  </Label>
+                  <Input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
+                </div>
               </div>
-              <div className="mt-4 text-center">
-                <h3 className="text-lg font-semibold">
-                  {form.firstName} {form.lastName}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Photo de profil
-                </p>
-              </div>
+
+              {/* Avatar preview actions */}
+              {avatarPreview && avatarPreview !== currentAvatarUrl && (
+                <div className="mt-3 flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    Nouvelle photo
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeAvatar}
+                    className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Annuler
+                  </Button>
+                </div>
+              )}
+              
+              <p className="mt-2 text-xs text-muted-foreground text-center">
+                JPG, PNG, WebP • Max 1 Mo
+              </p>
             </div>
 
             {/* Informations personnelles */}
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="firstName">Prénom</Label>
+                <Label htmlFor="firstName" className="text-sm">Prénom *</Label>
                 <Input
                   id="firstName"
                   required
                   value={form.firstName}
                   onChange={set("firstName")}
                   placeholder="Votre prénom"
+                  className="text-sm sm:text-base"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="lastName">Nom</Label>
+                <Label htmlFor="lastName" className="text-sm">Nom *</Label>
                 <Input
                   id="lastName"
                   required
                   value={form.lastName}
                   onChange={set("lastName")}
                   placeholder="Votre nom"
+                  className="text-sm sm:text-base"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="phone">Numéro de téléphone</Label>
+              <Label htmlFor="phone" className="text-sm">Numéro de téléphone *</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -693,32 +740,34 @@ const set =
                 value={form.phone}
                 onChange={set("phone")}
                 placeholder="01 56 90 41 09"
+                className="text-sm sm:text-base"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="profession">Profession</Label>
+              <Label htmlFor="profession" className="text-sm">Profession *</Label>
               <Input
                 id="profession"
                 required
                 value={form.profession}
                 onChange={set("profession")}
                 placeholder="Ex: Commerçant, Enseignant, Étudiant..."
+                className="text-sm sm:text-base"
               />
             </div>
 
             {/* Localisation */}
             <div className="space-y-3">
-              <Label className="text-base font-semibold">Localisation</Label>
+              <Label className="text-sm font-semibold">Localisation</Label>
               
               <div className="space-y-1.5">
-                <Label htmlFor="department">Département</Label>
+                <Label htmlFor="department" className="text-sm">Département *</Label>
                 <select
                   id="department"
                   required
                   value={form.department}
                   onChange={set("department")}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <option value="">Sélectionnez un département</option>
                   {beninDepartements.map(dept => (
@@ -728,14 +777,14 @@ const set =
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="city">Commune</Label>
+                <Label htmlFor="city" className="text-sm">Commune *</Label>
                 <select
                   id="city"
                   required
                   value={form.city}
                   onChange={set("city")}
                   disabled={!form.department}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="">Sélectionnez une commune</option>
                   {communes.map(commune => (
@@ -745,14 +794,14 @@ const set =
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="arrondissement">Arrondissement / Ville</Label>
+                <Label htmlFor="arrondissement" className="text-sm">Arrondissement / Ville *</Label>
                 <select
                   id="arrondissement"
                   required
                   value={form.arrondissement}
                   onChange={set("arrondissement")}
                   disabled={!form.city}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="">Sélectionnez un arrondissement</option>
                   {arrondissements.map(arr => (
@@ -762,35 +811,32 @@ const set =
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="neighborhood">Quartier</Label>
+                <Label htmlFor="neighborhood" className="text-sm">Quartier *</Label>
                 <Input
                   id="neighborhood"
                   required
                   value={form.neighborhood}
                   onChange={set("neighborhood")}
                   placeholder="Ex: Zongo, Haie Vive, Cadjehoun..."
+                  className="text-sm sm:text-base"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="address">Adresse détaillée</Label>
+                <Label htmlFor="address" className="text-sm">Adresse détaillée *</Label>
                 <Input
                   id="address"
                   required
                   value={form.address}
                   onChange={set("address")}
                   placeholder="Ex: Rue 12.45, près du marché central"
+                  className="text-sm sm:text-base"
                 />
               </div>
             </div>
 
-            {/* Boutons d'action */}
-            <div className="flex flex-col gap-3 pt-4 sm:flex-row">
-              <Button type="submit" className="flex-1" size="lg" disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <Save className="mr-2 h-4 w-4" />
-                Enregistrer les modifications
-              </Button>
+            {/* Action buttons */}
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -799,330 +845,354 @@ const set =
               >
                 Annuler
               </Button>
+              <Button type="submit" className="flex-1" size="lg" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Save className="mr-2 h-4 w-4" />
+                Enregistrer
+              </Button>
             </div>
           </form>
 
-                    {/* Section Membres de famille */}
-          <div className="mt-8 pt-8 border-t border-border/60">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Users className="h-6 w-6 text-primary" />
-                <h2 className="font-display text-xl font-semibold md:text-2xl">Quelques membres de votre équipe</h2>
+          {/* Section Membres de famille */}
+          <div className="mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-border/60">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                <h2 className="font-display text-lg sm:text-xl lg:text-2xl font-semibold">
+                  Membres de l'équipe
+                </h2>
+                <Badge variant="secondary" className="text-xs">
+                  {familyMembers.length}/2
+                </Badge>
               </div>
               {familyMembers.length < 2 && (
-                <Button onClick={handleAddMember} size="sm">
+                <Button onClick={handleAddMember} size="sm" className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
-                  Ajouter un membre
+                  Ajouter
                 </Button>
               )}
             </div>
 
             {familyMembers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Aucun membre ajouté</p>
-                <p className="text-sm mt-1">Vous pouvez ajouter jusqu'à 2 membres</p>
+              <div className="text-center py-6 sm:py-8 text-muted-foreground">
+                <Users className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm sm:text-base">Aucun membre ajouté</p>
+                <p className="text-xs sm:text-sm mt-1">Vous pouvez ajouter jusqu'à 2 membres</p>
               </div>
             ) : (
-              <div className="grid gap-4">
+              <div className="space-y-3 sm:space-y-4">
                 {familyMembers.map((member) => (
                   <div
                     key={member.id}
-                    className="flex items-start gap-4 p-4 rounded-xl border border-border/60 bg-muted/30 hover:bg-muted/50 transition-colors"
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-border/60 bg-muted/30 hover:bg-muted/50 transition-colors"
                   >
-                    <Avatar className="h-16 w-16 rounded-full border-2 border-primary/20">
-                      <AvatarImage
-                        src={member.avatar_url || undefined}
-                        alt={`${member.first_name} ${member.last_name}`}
-                        className="object-cover"
-                      />
-                      <AvatarFallback className="bg-gradient-hero text-lg text-primary-foreground">
-                        {member.first_name[0]}{member.last_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
+                      <Avatar className="h-12 w-12 sm:h-14 sm:w-14 rounded-full border-2 border-primary/20 shrink-0">
+                        <AvatarImage
+                          src={member.avatar_url || undefined}
+                          alt={`${member.first_name} ${member.last_name}`}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="bg-gradient-hero text-base sm:text-lg text-primary-foreground">
+                          {member.first_name[0]}{member.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
 
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-lg">
-                          {member.first_name} {member.last_name}
-                        </h3>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                          {member.relationship}
-                        </span>
-                      </div>
-                      
-                      <div className="grid gap-1 text-sm text-muted-foreground">
-                        {member.phone && (
-                          <p className="flex items-center gap-2">
-                            <span className="font-medium">Téléphone:</span> {member.phone}
-                          </p>
-                        )}
-                        {member.profession && (
-                          <p className="flex items-center gap-2">
-                            <span className="font-medium">Profession:</span> {member.profession}
-                          </p>
-                        )}
-                        {member.department && member.city && (
-                          <p className="flex items-center gap-2">
-                            <span className="font-medium">Localisation:</span> {member.city}, {member.department}
-                          </p>
-                        )}
-                        {member.address && (
-                          <p className="flex items-center gap-2">
-                            <span className="font-medium">Adresse:</span> {member.address}
-                          </p>
-                        )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <h3 className="font-semibold text-sm sm:text-base truncate">
+                            {member.first_name} {member.last_name}
+                          </h3>
+                          <Badge className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0 bg-primary/10 text-primary">
+                            {member.relationship}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+                          {member.phone && (
+                            <span className="truncate">{member.phone}</span>
+                          )}
+                          {member.profession && (
+                            <span className="truncate">{member.profession}</span>
+                          )}
+                          {member.city && member.department && (
+                            <span className="hidden sm:inline truncate">
+                              {member.city}, {member.department}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleEditMember(member)}
+                        className="h-8 w-8 sm:h-9 sm:w-9 p-0"
                       >
-                        <Edit2 className="h-4 w-4" />
+                        <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteMember(member.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Êtes-vous sûr de vouloir supprimer {member.first_name} {member.last_name} ?
+                              Cette action est irréversible.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteMember(member.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-
-          {/* Modal Formulaire Membre */}
-          {showMemberForm && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-background rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-semibold">
-                    {editingMemberId ? "Modifier le membre" : "Ajouter un membre"}
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowMemberForm(false)}
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-
-                <form onSubmit={onSubmitMember} className="space-y-4">
-                  {/* Relation */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="relationship">Relation *</Label>
-                    <select
-                      id="relationship"
-                      required
-                      value={memberForm.relationship}
-                      onChange={setMember("relationship")}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <option value="">Sélectionnez une relation</option>
-                      <option value="Sécrétaire">Sécrétaire</option>
-                      <option value="Trésorier">Trésorier</option>
-                      {/* <option value="Parent">Parent</option>
-                      <option value="Frère/Sœur">Frère/Sœur</option>
-                      <option value="Autre">Autre</option> */}
-                    </select>
-                  </div>
-
-                                  {/* Avatar du membre */}
-                  <div className="space-y-1.5">
-                    <Label>Photo de profil (optionnel)</Label>
-                    <div className="flex items-center gap-4">
-                      {memberAvatarPreview ? (
-                        <div className="relative">
-                          <img 
-                            src={memberAvatarPreview} 
-                            alt="Aperçu" 
-                            className="h-20 w-20 rounded-full object-cover border-2 border-primary"
-                          />
-                          <button
-                            type="button"
-                            onClick={removeMemberAvatar}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-border">
-                          <User className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1 space-y-2">
-                        <Input
-                          id="member-avatar"
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          onChange={handleMemberAvatarChange}
-                          className="hidden"
-                        />
-                        
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => document.getElementById('member-avatar')?.click()}
-                          className="w-full"
-                        >
-                          <Upload className="mr-2 h-4 w-4" />
-                          Choisir une photo
-                        </Button>
-                        
-                        <p className="text-xs text-muted-foreground text-center">
-                          JPG, PNG ou WebP • Max 1 Mo
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Nom et Prénom */}
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="member-firstName">Prénom *</Label>
-                      <Input
-                        id="member-firstName"
-                        required
-                        value={memberForm.firstName}
-                        onChange={setMember("firstName")}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="member-lastName">Nom *</Label>
-                      <Input
-                        id="member-lastName"
-                        required
-                        value={memberForm.lastName}
-                        onChange={setMember("lastName")}
-                      />
-                    </div>
-                  </div>
-                  {/* Téléphone */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="member-phone">Téléphone</Label>
-                    <Input
-                      id="member-phone"
-                      type="tel"
-                      value={memberForm.phone}
-                      onChange={setMember("phone")}
-                      placeholder="01 56 90 41 09"
-                    />
-                  </div>
-
-                  {/* Profession */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="member-profession">Profession</Label>
-                    <Input
-                      id="member-profession"
-                      value={memberForm.profession}
-                      onChange={setMember("profession")}
-                      placeholder="Ex: Commerçant, Enseignant..."
-                    />
-                  </div>
-
-                  {/* Localisation */}
-                  <div className="space-y-3">
-                    <Label className="text-base font-semibold">Localisation</Label>
-                    
-                    <div className="space-y-1.5">
-                      <Label htmlFor="member-department">Département</Label>
-                      <select
-                        id="member-department"
-                        value={memberForm.department}
-                        onChange={setMember("department")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="">Sélectionnez un département</option>
-                        {beninDepartements.map(dept => (
-                          <option key={dept.nom} value={dept.nom}>{dept.nom}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="member-city">Commune</Label>
-                      <select
-                        id="member-city"
-                        value={memberForm.city}
-                        onChange={setMember("city")}
-                        disabled={!memberForm.department}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="">Sélectionnez une commune</option>
-                        {memberCommunes.map(commune => (
-                          <option key={commune} value={commune}>{commune}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="member-arrondissement">Arrondissement</Label>
-                      <select
-                        id="member-arrondissement"
-                        value={memberForm.arrondissement}
-                        onChange={setMember("arrondissement")}
-                        disabled={!memberForm.city}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="">Sélectionnez un arrondissement</option>
-                        {memberArrondissements.map(arr => (
-                          <option key={arr} value={arr}>{arr}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="member-neighborhood">Quartier</Label>
-                      <Input
-                        id="member-neighborhood"
-                        value={memberForm.neighborhood}
-                        onChange={setMember("neighborhood")}
-                        placeholder="Ex: Zongo, Haie Vive..."
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="member-address">Adresse détaillée</Label>
-                      <Input
-                        id="member-address"
-                        value={memberForm.address}
-                        onChange={setMember("address")}
-                        placeholder="Ex: Rue 12.45, près du marché"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Boutons */}
-                  <div className="flex gap-3 pt-4">
-                    <Button type="submit" className="flex-1" disabled={savingMember}>
-                      {savingMember && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <Save className="mr-2 h-4 w-4" />
-                      {editingMemberId ? "Mettre à jour" : "Ajouter"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowMemberForm(false)}
-                    >
-                      Annuler
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
         </div>
       </main>
       <Footer />
+
+      {/* Sheet pour le formulaire membre - plus responsive que la modal */}
+      <Sheet open={showMemberForm} onOpenChange={setShowMemberForm}>
+        <SheetContent side="bottom" className="h-[95vh] sm:h-auto sm:max-w-lg sm:mx-auto sm:rounded-t-2xl p-4 sm:p-6 overflow-y-auto">
+          <SheetHeader className="text-left">
+            <SheetTitle className="text-lg sm:text-xl">
+              {editingMemberId ? "Modifier le membre" : "Ajouter un membre"}
+            </SheetTitle>
+            <SheetDescription>
+              {editingMemberId ? "Modifiez les informations du membre" : "Ajoutez un nouveau membre à votre équipe"}
+            </SheetDescription>
+          </SheetHeader>
+
+          <form onSubmit={onSubmitMember} className="mt-4 sm:mt-6 space-y-4 sm:space-y-5">
+            {/* Relation */}
+            <div className="space-y-1.5">
+              <Label htmlFor="relationship" className="text-sm">Relation *</Label>
+              <select
+                id="relationship"
+                required
+                value={memberForm.relationship}
+                onChange={setMember("relationship")}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">Sélectionnez une relation</option>
+                <option value="Sécrétaire">Sécrétaire</option>
+                <option value="Trésorier">Trésorier</option>
+              </select>
+            </div>
+
+            {/* Avatar du membre */}
+            <div className="space-y-1.5">
+              <Label className="text-sm">Photo de profil (optionnel)</Label>
+              <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+                <div className="relative shrink-0">
+                  {memberAvatarPreview ? (
+                    <div className="relative">
+                      <img 
+                        src={memberAvatarPreview} 
+                        alt="Aperçu" 
+                        className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover border-2 border-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeMemberAvatar}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-border">
+                      <User className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 w-full space-y-1.5">
+                  <Input
+                    id="member-avatar"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleMemberAvatarChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('member-avatar')?.click()}
+                    className="w-full text-sm"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Choisir une photo
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    JPG, PNG ou WebP • Max 1 Mo
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Nom et Prénom */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="member-firstName" className="text-sm">Prénom *</Label>
+                <Input
+                  id="member-firstName"
+                  required
+                  value={memberForm.firstName}
+                  onChange={setMember("firstName")}
+                  className="text-sm sm:text-base"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="member-lastName" className="text-sm">Nom *</Label>
+                <Input
+                  id="member-lastName"
+                  required
+                  value={memberForm.lastName}
+                  onChange={setMember("lastName")}
+                  className="text-sm sm:text-base"
+                />
+              </div>
+            </div>
+
+            {/* Téléphone */}
+            <div className="space-y-1.5">
+              <Label htmlFor="member-phone" className="text-sm">Téléphone</Label>
+              <Input
+                id="member-phone"
+                type="tel"
+                value={memberForm.phone}
+                onChange={setMember("phone")}
+                placeholder="01 56 90 41 09"
+                className="text-sm sm:text-base"
+              />
+            </div>
+
+            {/* Profession */}
+            <div className="space-y-1.5">
+              <Label htmlFor="member-profession" className="text-sm">Profession</Label>
+              <Input
+                id="member-profession"
+                value={memberForm.profession}
+                onChange={setMember("profession")}
+                placeholder="Ex: Commerçant, Enseignant..."
+                className="text-sm sm:text-base"
+              />
+            </div>
+
+            {/* Localisation membre */}
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Localisation</Label>
+              
+              <div className="space-y-1.5">
+                <Label htmlFor="member-department" className="text-sm">Département</Label>
+                <select
+                  id="member-department"
+                  value={memberForm.department}
+                  onChange={setMember("department")}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Sélectionnez un département</option>
+                  {beninDepartements.map(dept => (
+                    <option key={dept.nom} value={dept.nom}>{dept.nom}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="member-city" className="text-sm">Commune</Label>
+                <select
+                  id="member-city"
+                  value={memberForm.city}
+                  onChange={setMember("city")}
+                  disabled={!memberForm.department}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Sélectionnez une commune</option>
+                  {memberCommunes.map(commune => (
+                    <option key={commune} value={commune}>{commune}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="member-arrondissement" className="text-sm">Arrondissement</Label>
+                <select
+                  id="member-arrondissement"
+                  value={memberForm.arrondissement}
+                  onChange={setMember("arrondissement")}
+                  disabled={!memberForm.city}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Sélectionnez un arrondissement</option>
+                  {memberArrondissements.map(arr => (
+                    <option key={arr} value={arr}>{arr}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="member-neighborhood" className="text-sm">Quartier</Label>
+                <Input
+                  id="member-neighborhood"
+                  value={memberForm.neighborhood}
+                  onChange={setMember("neighborhood")}
+                  placeholder="Ex: Zongo, Haie Vive..."
+                  className="text-sm sm:text-base"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="member-address" className="text-sm">Adresse détaillée</Label>
+                <Input
+                  id="member-address"
+                  value={memberForm.address}
+                  onChange={setMember("address")}
+                  placeholder="Ex: Rue 12.45, près du marché"
+                  className="text-sm sm:text-base"
+                />
+              </div>
+            </div>
+
+            {/* Boutons */}
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowMemberForm(false)}
+              >
+                Annuler
+              </Button>
+              <Button type="submit" className="flex-1" disabled={savingMember}>
+                {savingMember && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Save className="mr-2 h-4 w-4" />
+                {editingMemberId ? "Mettre à jour" : "Ajouter"}
+              </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
