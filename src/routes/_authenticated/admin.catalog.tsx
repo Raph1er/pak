@@ -65,7 +65,7 @@ function AdminCatalogPage() {
     if (!toDelete) return;
     const { error } = await supabase.from("products").delete().eq("id", toDelete.id);
     if (error) {
-      toast.error("Suppression impossible : " + error.message);
+      toast.error("Suppression impossible. 😌");
     } else {
       toast.success("Produit supprimé.");
       setProducts((prev) => prev?.filter((p) => p.id !== toDelete.id) ?? null);
