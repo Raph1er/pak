@@ -12,11 +12,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
+import { isValidPhone, normalizePhone } from "@/lib/phone";
+
 const schema = z.object({
     fullName: z.string().trim().min(3, "Nom requis"),
-    email: z.string().trim().email("Email invalide"),
+    phone: z.string().trim().refine(isValidPhone, {
+        message: "Numéro de téléphone invalide. Format: 01 56 90 41 09",
+    }),
     subject: z.string().trim().min(5, "Sujet requis"),
-    message: z.string().trim().min(10, "Message requis").max(2000),
+    message: z.string().trim().min(5, "Message : 5 caractères obligatoires").max(2000),
     productTitle: z.string().trim().optional(),
 });
 
@@ -31,7 +35,7 @@ function ContactPage() {
     const { user, isAuthenticated, isAdmin, loading } = useAuth();
     const navigate = useNavigate();
     const [fullName, setFullName] = useState("");
-    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
     const [subject, setSubject] = useState("");
     const [message, setMessage] = useState("");
     const [productTitle, setProductTitle] = useState<string | undefined>(undefined);
@@ -46,8 +50,24 @@ function ContactPage() {
         }
 
         if (isAuthenticated && user) {
-            setEmail(user.email ?? "");
-            setFullName((user.user_metadata?.first_name as string) || "");
+            // Charger les infos depuis le profil
+            const fetchUserProfile = async () => {
+                const { data, error } = await supabase
+                    .from("profiles")
+                    .select("first_name, last_name, phone")
+                    .eq("id", user.id)
+                    .single();
+
+                if (!error && data) {
+                    setFullName(`${data.first_name || ""} ${data.last_name || ""}`.trim());
+                    setPhone(data.phone || "");
+                } else {
+                    // Fallback aux métadonnées
+                    setFullName((user.user_metadata?.first_name as string) || "");
+                    setPhone((user.user_metadata?.phone as string) || "");
+                }
+            };
+            fetchUserProfile();
         }
 
         const params = new URLSearchParams(window.location.search);
@@ -94,7 +114,7 @@ function ContactPage() {
         event.preventDefault();
         const parsed = schema.safeParse({
             fullName,
-            email,
+            phone,
             subject,
             message,
             productTitle,
@@ -127,11 +147,12 @@ function ContactPage() {
         }
         const payload = {
             user_id: user?.id ?? undefined,
-            email: parsed.data.email,
+            email: user?.email ?? "", // On garde l'email fictif pour la BD
             full_name: parsed.data.fullName,
             subject: parsed.data.subject,
             message: parsed.data.message,
             product_title: parsed.data.productTitle ?? undefined,
+            phone: normalizePhone(parsed.data.phone), // Nouveau champ
         };
         const { error } = await ((supabase as any).from("contact_messages") as any).insert(payload);
         setSubmitting(false);
@@ -187,14 +208,37 @@ function ContactPage() {
                                 </div>
                             ) : null}
 
-                            <div className="grid gap-4 sm:grid-cols-2">
+                                                 <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label>Nom complet *</Label>
-                                    <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jean Dupont" />
+                                    <Input 
+                                        value={fullName} 
+                                        onChange={(e) => setFullName(e.target.value)} 
+                                        placeholder="Jean Dupont"
+                                        readOnly={isAuthenticated}
+                                        className={isAuthenticated ? "bg-muted cursor-not-allowed" : ""}
+                                    />
+                                    {isAuthenticated && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            🔒 Information de votre profil
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Email *</Label>
-                                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jean@exemple.com" />
+                                    <Label>Numéro de téléphone *</Label>
+                                    <Input 
+                                        type="tel"
+                                        value={phone} 
+                                        onChange={(e) => setPhone(e.target.value)} 
+                                        placeholder="01 56 90 41 09"
+                                        readOnly={isAuthenticated}
+                                        className={isAuthenticated ? "bg-muted cursor-not-allowed" : ""}
+                                    />
+                                    {isAuthenticated && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            🔒 Information de votre profil
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 

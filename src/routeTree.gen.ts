@@ -25,9 +25,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CatalogSlugRouteImport } from './routes/catalog.$slug'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminRequests_pendingRouteImport } from './routes/_authenticated/admin.requests_pending'
 import { Route as AuthenticatedAdminRequestsRouteImport } from './routes/_authenticated/admin.requests'
 import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated/admin.messages'
+import { Route as AuthenticatedAdminClientsRouteImport } from './routes/_authenticated/admin.clients'
 import { Route as AuthenticatedAdminCatalogRouteImport } from './routes/_authenticated/admin.catalog'
+import { Route as AuthenticatedAdminClientsClientIdRouteImport } from './routes/_authenticated/admin.clients.$clientId'
 import { Route as AuthenticatedAdminCatalogNewRouteImport } from './routes/_authenticated/admin.catalog.new'
 import { Route as AuthenticatedAdminCatalogIdRouteImport } from './routes/_authenticated/admin.catalog.$id'
 
@@ -110,6 +113,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAdminRequests_pendingRoute =
+  AuthenticatedAdminRequests_pendingRouteImport.update({
+    id: '/requests_pending',
+    path: '/requests_pending',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminRequestsRoute =
   AuthenticatedAdminRequestsRouteImport.update({
     id: '/requests',
@@ -122,11 +131,23 @@ const AuthenticatedAdminMessagesRoute =
     path: '/messages',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminClientsRoute =
+  AuthenticatedAdminClientsRouteImport.update({
+    id: '/clients',
+    path: '/clients',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminCatalogRoute =
   AuthenticatedAdminCatalogRouteImport.update({
     id: '/catalog',
     path: '/catalog',
     getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminClientsClientIdRoute =
+  AuthenticatedAdminClientsClientIdRouteImport.update({
+    id: '/$clientId',
+    path: '/$clientId',
+    getParentRoute: () => AuthenticatedAdminClientsRoute,
   } as any)
 const AuthenticatedAdminCatalogNewRoute =
   AuthenticatedAdminCatalogNewRouteImport.update({
@@ -158,10 +179,13 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/catalog/$slug': typeof CatalogSlugRoute
   '/admin/catalog': typeof AuthenticatedAdminCatalogRouteWithChildren
+  '/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/requests': typeof AuthenticatedAdminRequestsRoute
+  '/admin/requests_pending': typeof AuthenticatedAdminRequests_pendingRoute
   '/admin/catalog/$id': typeof AuthenticatedAdminCatalogIdRoute
   '/admin/catalog/new': typeof AuthenticatedAdminCatalogNewRoute
+  '/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -180,10 +204,13 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/catalog/$slug': typeof CatalogSlugRoute
   '/admin/catalog': typeof AuthenticatedAdminCatalogRouteWithChildren
+  '/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/requests': typeof AuthenticatedAdminRequestsRoute
+  '/admin/requests_pending': typeof AuthenticatedAdminRequests_pendingRoute
   '/admin/catalog/$id': typeof AuthenticatedAdminCatalogIdRoute
   '/admin/catalog/new': typeof AuthenticatedAdminCatalogNewRoute
+  '/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -204,10 +231,13 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/catalog/$slug': typeof CatalogSlugRoute
   '/_authenticated/admin/catalog': typeof AuthenticatedAdminCatalogRouteWithChildren
+  '/_authenticated/admin/clients': typeof AuthenticatedAdminClientsRouteWithChildren
   '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/_authenticated/admin/requests': typeof AuthenticatedAdminRequestsRoute
+  '/_authenticated/admin/requests_pending': typeof AuthenticatedAdminRequests_pendingRoute
   '/_authenticated/admin/catalog/$id': typeof AuthenticatedAdminCatalogIdRoute
   '/_authenticated/admin/catalog/new': typeof AuthenticatedAdminCatalogNewRoute
+  '/_authenticated/admin/clients/$clientId': typeof AuthenticatedAdminClientsClientIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -228,10 +258,13 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/catalog/$slug'
     | '/admin/catalog'
+    | '/admin/clients'
     | '/admin/messages'
     | '/admin/requests'
+    | '/admin/requests_pending'
     | '/admin/catalog/$id'
     | '/admin/catalog/new'
+    | '/admin/clients/$clientId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -250,10 +283,13 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/catalog/$slug'
     | '/admin/catalog'
+    | '/admin/clients'
     | '/admin/messages'
     | '/admin/requests'
+    | '/admin/requests_pending'
     | '/admin/catalog/$id'
     | '/admin/catalog/new'
+    | '/admin/clients/$clientId'
   id:
     | '__root__'
     | '/'
@@ -273,10 +309,13 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/catalog/$slug'
     | '/_authenticated/admin/catalog'
+    | '/_authenticated/admin/clients'
     | '/_authenticated/admin/messages'
     | '/_authenticated/admin/requests'
+    | '/_authenticated/admin/requests_pending'
     | '/_authenticated/admin/catalog/$id'
     | '/_authenticated/admin/catalog/new'
+    | '/_authenticated/admin/clients/$clientId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -410,6 +449,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/requests_pending': {
+      id: '/_authenticated/admin/requests_pending'
+      path: '/requests_pending'
+      fullPath: '/admin/requests_pending'
+      preLoaderRoute: typeof AuthenticatedAdminRequests_pendingRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/requests': {
       id: '/_authenticated/admin/requests'
       path: '/requests'
@@ -424,12 +470,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminMessagesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/clients': {
+      id: '/_authenticated/admin/clients'
+      path: '/clients'
+      fullPath: '/admin/clients'
+      preLoaderRoute: typeof AuthenticatedAdminClientsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/catalog': {
       id: '/_authenticated/admin/catalog'
       path: '/catalog'
       fullPath: '/admin/catalog'
       preLoaderRoute: typeof AuthenticatedAdminCatalogRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/clients/$clientId': {
+      id: '/_authenticated/admin/clients/$clientId'
+      path: '/$clientId'
+      fullPath: '/admin/clients/$clientId'
+      preLoaderRoute: typeof AuthenticatedAdminClientsClientIdRouteImport
+      parentRoute: typeof AuthenticatedAdminClientsRoute
     }
     '/_authenticated/admin/catalog/new': {
       id: '/_authenticated/admin/catalog/new'
@@ -464,16 +524,36 @@ const AuthenticatedAdminCatalogRouteWithChildren =
     AuthenticatedAdminCatalogRouteChildren,
   )
 
+interface AuthenticatedAdminClientsRouteChildren {
+  AuthenticatedAdminClientsClientIdRoute: typeof AuthenticatedAdminClientsClientIdRoute
+}
+
+const AuthenticatedAdminClientsRouteChildren: AuthenticatedAdminClientsRouteChildren =
+  {
+    AuthenticatedAdminClientsClientIdRoute:
+      AuthenticatedAdminClientsClientIdRoute,
+  }
+
+const AuthenticatedAdminClientsRouteWithChildren =
+  AuthenticatedAdminClientsRoute._addFileChildren(
+    AuthenticatedAdminClientsRouteChildren,
+  )
+
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCatalogRoute: typeof AuthenticatedAdminCatalogRouteWithChildren
+  AuthenticatedAdminClientsRoute: typeof AuthenticatedAdminClientsRouteWithChildren
   AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
   AuthenticatedAdminRequestsRoute: typeof AuthenticatedAdminRequestsRoute
+  AuthenticatedAdminRequests_pendingRoute: typeof AuthenticatedAdminRequests_pendingRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminCatalogRoute: AuthenticatedAdminCatalogRouteWithChildren,
+  AuthenticatedAdminClientsRoute: AuthenticatedAdminClientsRouteWithChildren,
   AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
   AuthenticatedAdminRequestsRoute: AuthenticatedAdminRequestsRoute,
+  AuthenticatedAdminRequests_pendingRoute:
+    AuthenticatedAdminRequests_pendingRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =

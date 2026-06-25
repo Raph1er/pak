@@ -154,7 +154,7 @@ function Hero() {
   ] });
 }
 const items$1 = [
-  { value: "1 240+", label: "Familles accompagnées" },
+  { value: "1 240+", label: "Membres associatifs" },
   { value: "38", label: "Packs & kits actifs" },
   { value: "94%", label: "Taux de satisfaction" },
   { value: "12", label: "Régions couvertes" }

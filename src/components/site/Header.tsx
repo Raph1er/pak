@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Sprout, Menu, LogOut, LayoutDashboard, ShieldCheck, Mail, User } from "lucide-react";
+import { Sprout, Menu, LogOut, LayoutDashboard, ShieldCheck, Mail, User, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 export function Header() {
   const [open, setOpen] = useState(false);
   const [unreadContactCount, setUnreadContactCount] = useState<number>(0);
+  const [unreadRequestsCount, setUnreadRequestsCount] = useState<number>(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { isAuthenticated, user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export function Header() {
   const initials =
     ((user?.user_metadata?.first_name as string)?.[0] ?? user?.email?.[0] ?? "K").toUpperCase();
 
+  // Charger l'avatar du profil
   useEffect(() => {
     let active = true;
     
@@ -72,6 +74,7 @@ export function Header() {
     };
   }, [isAuthenticated, user?.id]);
 
+  // Compter les messages non lus
   useEffect(() => {
     let active = true;
     if (!isAdmin) return;
@@ -94,10 +97,36 @@ export function Header() {
     };
   }, [isAdmin]);
 
+  // Compter les demandes non analysées (status = 'pending')
+  useEffect(() => {
+    let active = true;
+    if (!isAdmin) return;
+
+    const fetchCount = async () => {
+      const res = await supabase
+        .from("requests")
+        .select("id", { head: true, count: "exact" })
+        .eq("status", "pending");
+      if (!active) return;
+      setUnreadRequestsCount(res.count ?? 0);
+    };
+
+    fetchCount();
+    window.addEventListener("focus", fetchCount);
+
+    return () => {
+      active = false;
+      window.removeEventListener("focus", fetchCount);
+    };
+  }, [isAdmin]);
+
   const handleLogout = async () => {
     await signOut();
     navigate({ to: "/" });
   };
+
+  // Calcul du total des notifications admin
+  const totalAdminNotifications = unreadContactCount + unreadRequestsCount;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
@@ -126,18 +155,49 @@ export function Header() {
         {/* Section desktop - cachée sur mobile */}
         <div className="hidden md:flex items-center gap-2">
           {isAuthenticated && isAdmin && (
-            <Link
-              to="/admin/messages"
-              className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition hover:border-primary hover:text-primary"
-            >
-              <Mail className="h-4 w-4" />
-              {unreadContactCount > 0 && (
-                <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
-                  {unreadContactCount}
-                </span>
-              )}
-            </Link>
+            <>
+              {/* Bouton Admin avec badge combiné */}
+              <Link
+                to="/admin"
+                className="relative inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-2 text-sm font-medium text-primary transition hover:border-primary hover:bg-primary/10"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                <span>Admin</span>
+                {totalAdminNotifications > 0 && (
+                  <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-[0.65rem] font-semibold text-destructive-foreground">
+                    {totalAdminNotifications}
+                  </span>
+                )}
+              </Link>
+
+              {/* Bouton Messages non lus */}
+              <Link
+                to="/admin/messages"
+                className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition hover:border-primary hover:text-primary"
+              >
+                <Mail className="h-4 w-4" />
+                {unreadContactCount > 0 && (
+                  <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
+                    {unreadContactCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Bouton Demandes à analyser */}
+              <Link
+                to="/admin/requests_pending"
+                className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition hover:border-primary hover:text-primary"
+              >
+                <Package className="h-4 w-4" />
+                {unreadRequestsCount > 0 && (
+                  <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
+                    {unreadRequestsCount}
+                  </span>
+                )}
+              </Link>
+            </>
           )}
+
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -157,12 +217,42 @@ export function Header() {
                 <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/dashboard"><LayoutDashboard className="mr-2 h-4 w-4" />Tableau de bord</Link>
+                  <Link to="/dashboard">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Tableau de bord
+                  </Link>
                 </DropdownMenuItem>
                 {isAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/messages"><Mail className="mr-2 h-4 w-4" />Messages</Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin">
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        Administration
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/messages">
+                        <Mail className="mr-2 h-4 w-4" />
+                        Messages
+                        {unreadContactCount > 0 && (
+                          <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
+                            {unreadContactCount}
+                          </span>
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/requests_pending">
+                        <Package className="mr-2 h-4 w-4" />
+                        Demandes à analyser
+                        {unreadRequestsCount > 0 && (
+                          <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
+                            {unreadRequestsCount}
+                          </span>
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
@@ -173,7 +263,8 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />Se déconnecter
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Se déconnecter
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -214,20 +305,42 @@ export function Header() {
                 <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/dashboard"><LayoutDashboard className="mr-2 h-4 w-4" />Tableau de bord</Link>
+                  <Link to="/dashboard">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Tableau de bord
+                  </Link>
                 </DropdownMenuItem>
                 {isAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/messages">
-                      <Mail className="mr-2 h-4 w-4" />
-                      Messages
-                      {unreadContactCount > 0 && (
-                        <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
-                          {unreadContactCount}
-                        </span>
-                      )}
-                    </Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin">
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        Administration
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/messages">
+                        <Mail className="mr-2 h-4 w-4" />
+                        Messages
+                        {unreadContactCount > 0 && (
+                          <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
+                            {unreadContactCount}
+                          </span>
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/requests_pending">
+                        <Package className="mr-2 h-4 w-4" />
+                        Demandes à analyser
+                        {unreadRequestsCount > 0 && (
+                          <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
+                            {unreadRequestsCount}
+                          </span>
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
@@ -238,7 +351,8 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />Se déconnecter
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Se déconnecter
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -258,25 +372,39 @@ export function Header() {
             aria-controls="mobile-menu"
           >
             <Menu className="h-5 w-5" />
-            {/* Badge de messages non lus sur le bouton menu */}
-            {isAuthenticated && isAdmin && unreadContactCount > 0 && (
+            {/* Badge de notifications sur le bouton menu */}
+            {isAuthenticated && isAdmin && totalAdminNotifications > 0 && (
               <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[0.55rem] font-semibold text-destructive-foreground">
-                {unreadContactCount}
+                {totalAdminNotifications > 9 ? "9+" : totalAdminNotifications}
               </span>
             )}
           </button>
         </div>
       </div>
 
-      {/* Bannière messages non lus (mobile) */}
-      {isAuthenticated && isAdmin && unreadContactCount > 0 && !open && (
+      {/* Bannière notifications non lues (mobile) */}
+      {isAuthenticated && isAdmin && totalAdminNotifications > 0 && !open && (
         <div className="border-t border-border/60 bg-destructive/10 px-4 py-2 text-sm text-destructive md:hidden">
-          <Link to="/admin/messages" className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-            <span className="font-medium">
-              {unreadContactCount} message{unreadContactCount > 1 ? "s" : ""} non lu{unreadContactCount > 1 ? "s" : ""}
-            </span>
-            <span className="font-medium">Voir les messages</span>
-          </Link>
+          <div className="mx-auto flex max-w-7xl flex-col gap-1">
+            {unreadContactCount > 0 && (
+              <Link to="/admin/messages" className="flex items-center justify-between gap-3 py-1">
+                <span className="font-medium flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  {unreadContactCount} message{unreadContactCount > 1 ? "s" : ""} non lu{unreadContactCount > 1 ? "s" : ""}
+                </span>
+                <span className="font-medium">Voir →</span>
+              </Link>
+            )}
+            {unreadRequestsCount > 0 && (
+              <Link to="/admin/requests_pending" className="flex items-center justify-between gap-3 py-1">
+                <span className="font-medium flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  {unreadRequestsCount} demande{unreadRequestsCount > 1 ? "s" : ""} à analyser
+                </span>
+                <span className="font-medium">Voir →</span>
+              </Link>
+            )}
+          </div>
         </div>
       )}
 
@@ -299,23 +427,47 @@ export function Header() {
               {isAuthenticated && (
                 <>
                   <Link to="/dashboard" onClick={closeMenu} className="rounded-md px-3 py-2.5 text-sm hover:bg-muted transition-colors">
-                    <LayoutDashboard className="mr-2 inline h-4 w-4" />Tableau de bord
+                    <LayoutDashboard className="mr-2 inline h-4 w-4" />
+                    Tableau de bord
                   </Link>
                   {isAdmin && (
-                    <Link to="/admin/messages" onClick={closeMenu} className="rounded-md px-3 py-2.5 text-sm hover:bg-muted transition-colors">
-                      <Mail className="mr-2 inline h-4 w-4" />Messages
-                      {unreadContactCount > 0 && (
-                        <span className="ml-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
-                          {unreadContactCount}
-                        </span>
-                      )}
-                    </Link>
+                    <>
+                      <Link to="/admin" onClick={closeMenu} className="rounded-md px-3 py-2.5 text-sm hover:bg-muted transition-colors font-medium text-primary">
+                        <ShieldCheck className="mr-2 inline h-4 w-4" />
+                        Administration
+                        {totalAdminNotifications > 0 && (
+                          <span className="ml-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
+                            {totalAdminNotifications}
+                          </span>
+                        )}
+                      </Link>
+                      <Link to="/admin/messages" onClick={closeMenu} className="rounded-md px-3 py-2.5 text-sm hover:bg-muted transition-colors">
+                        <Mail className="mr-2 inline h-4 w-4" />
+                        Messages
+                        {unreadContactCount > 0 && (
+                          <span className="ml-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
+                            {unreadContactCount}
+                          </span>
+                        )}
+                      </Link>
+                      <Link to="/admin/requests_pending" onClick={closeMenu} className="rounded-md px-3 py-2.5 text-sm hover:bg-muted transition-colors">
+                        <Package className="mr-2 inline h-4 w-4" />
+                        Demandes à analyser
+                        {unreadRequestsCount > 0 && (
+                          <span className="ml-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-2 text-[0.65rem] font-semibold text-destructive-foreground">
+                            {unreadRequestsCount}
+                          </span>
+                        )}
+                      </Link>
+                    </>
                   )}
                   <Link to="/profile" onClick={closeMenu} className="rounded-md px-3 py-2.5 text-sm hover:bg-muted transition-colors">
-                    <User className="mr-2 inline h-4 w-4" />Mon profil
+                    <User className="mr-2 inline h-4 w-4" />
+                    Mon profil
                   </Link>
                   <Button variant="outline" className="mt-2 w-full" onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />Se déconnecter
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Se déconnecter
                   </Button>
                 </>
               )}

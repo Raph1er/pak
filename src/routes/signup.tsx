@@ -4,11 +4,13 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { phoneToEmail, isValidPhone, normalizePhone } from "@/lib/phone";
+import { beninDepartements } from "@/data/benin-locations";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Upload, X, User } from "lucide-react";
+import { useEffect } from "react";
 
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 Mo
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -20,6 +22,12 @@ const schema = z.object({
     message: "Numéro de téléphone invalide. Format: 01 56 90 41 09",
   }),
   password: z.string().min(6, "Au moins 6 caractères").max(72),
+  profession: z.string().trim().min(1, "Profession requise").max(100),
+  department: z.string().trim().min(1, "Département requis"),
+  city: z.string().trim().min(1, "Commune requise"),
+  arrondissement: z.string().trim().min(1, "Arrondissement requis"),
+  neighborhood: z.string().trim().min(1, "Quartier requis").max(100),
+  address: z.string().trim().min(1, "Adresse détaillée requise").max(200),
 });
 
 export const Route = createFileRoute("/signup")({
@@ -29,13 +37,64 @@ export const Route = createFileRoute("/signup")({
 
 function SignupPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", password: "" });
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    password: "",
+    profession: "",
+    department: "",
+    city: "",
+    arrondissement: "",
+    neighborhood: "",
+    address: "",
+  });
+
+  // États pour les listes déroulantes dépendantes
+  const [communes, setCommunes] = useState<string[]>([]);
+  const [arrondissements, setArrondissements] = useState<string[]>([]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((s) => ({ ...s, [k]: e.target.value }));
+    // Mettre à jour les communes quand le département change
+  useEffect(() => {
+    if (form.department) {
+      const dept = beninDepartements.find(d => d.nom === form.department);
+      if (dept) {
+        setCommunes(dept.communes.map(c => c.nom));
+      }
+    } else {
+      setCommunes([]);
+    }
+    // Réinitialiser les champs dépendants
+    setForm(prev => ({ ...prev, city: "", arrondissement: "" }));
+    setArrondissements([]);
+  }, [form.department]);
+
+  // Mettre à jour les arrondissements quand la commune change
+  useEffect(() => {
+    if (form.department && form.city) {
+      const dept = beninDepartements.find(d => d.nom === form.department);
+      const commune = dept?.communes.find(c => c.nom === form.city);
+      if (commune) {
+        setArrondissements(commune.arrondissements);
+      }
+    } else {
+      setArrondissements([]);
+    }
+    // Réinitialiser l'arrondissement
+    setForm(prev => ({ ...prev, arrondissement: "" }));
+  }, [form.city, form.department]);
+  const set =
+    (k: keyof typeof form) =>
+    (
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) =>
+      setForm((s) => ({
+        ...s,
+        [k]: e.target.value,
+      }));
 
   // Gestion du fichier avatar
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -170,6 +229,11 @@ function SignupPage() {
         phone: normalizePhone(parsed.data.phone),
         avatar_url: avatarUrl,
         email_verified: true,
+        profession: parsed.data.profession,
+        department: parsed.data.department,
+        city: parsed.data.city,
+        neighborhood: `${parsed.data.arrondissement}, ${parsed.data.neighborhood}`,
+        address: parsed.data.address,
       })
       .eq("id", userId);
 
@@ -193,10 +257,8 @@ function SignupPage() {
         </span>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4">
-
-
-        {/* Autres champs */}
+            <form onSubmit={onSubmit} className="space-y-4">
+        {/* Nom et Prénom */}
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="firstName">Prénom</Label>
@@ -207,6 +269,8 @@ function SignupPage() {
             <Input id="lastName" required value={form.lastName} onChange={set("lastName")} />
           </div>
         </div>
+
+        {/* Téléphone */}
         <div className="space-y-1.5">
           <Label htmlFor="phone">Numéro de téléphone</Label>
           <Input 
@@ -218,6 +282,8 @@ function SignupPage() {
             placeholder="01 56 90 41 09" 
           />
         </div>
+
+        {/* Mot de passe */}
         <div className="space-y-1.5">
           <Label htmlFor="password">Mot de passe</Label>
           <Input 
@@ -229,7 +295,101 @@ function SignupPage() {
           />
         </div>
 
-                {/* Avatar upload */}
+        {/* Profession */}
+        <div className="space-y-1.5">
+          <Label htmlFor="profession">Profession</Label>
+          <Input 
+            id="profession" 
+            required 
+            value={form.profession} 
+            onChange={set("profession")} 
+            placeholder="Ex: Commerçant, Enseignant, Étudiant..."
+          />
+        </div>
+
+        {/* Localisation */}
+        <div className="space-y-3">
+          <Label className="text-base font-semibold">Localisation</Label>
+          
+          {/* Département */}
+          <div className="space-y-1.5">
+            <Label htmlFor="department">Département</Label>
+            <select
+              id="department"
+              required
+              value={form.department}
+              onChange={set("department")}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">Sélectionnez un département</option>
+              {beninDepartements.map(dept => (
+                <option key={dept.nom} value={dept.nom}>{dept.nom}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Commune */}
+          <div className="space-y-1.5">
+            <Label htmlFor="city">Commune</Label>
+            <select
+              id="city"
+              required
+              value={form.city}
+              onChange={set("city")}
+              disabled={!form.department}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Sélectionnez une commune</option>
+              {communes.map(commune => (
+                <option key={commune} value={commune}>{commune}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Arrondissement */}
+          <div className="space-y-1.5">
+            <Label htmlFor="arrondissement">Arrondissement / Ville</Label>
+            <select
+              id="arrondissement"
+              required
+              value={form.arrondissement}
+              onChange={set("arrondissement")}
+              disabled={!form.city}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Sélectionnez un arrondissement</option>
+              {arrondissements.map(arr => (
+                <option key={arr} value={arr}>{arr}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Quartier */}
+          <div className="space-y-1.5">
+            <Label htmlFor="neighborhood">Quartier</Label>
+            <Input 
+              id="neighborhood" 
+              required 
+              value={form.neighborhood} 
+              onChange={set("neighborhood")} 
+              placeholder="Ex: Zongo, Haie Vive, Cadjehoun..."
+            />
+          </div>
+
+          {/* Adresse détaillée */}
+          <div className="space-y-1.5">
+            <Label htmlFor="address">Adresse détaillée</Label>
+            <Input 
+              id="address" 
+              required 
+              value={form.address} 
+              onChange={set("address")} 
+              placeholder="Ex: Rue 12.45, près du marché central"
+            />
+          </div>
+        </div>
+
+        {/* Avatar upload */}
         <div className="space-y-1.5">
           <Label>Photo de profil (optionnel)</Label>
           <div className="flex items-center gap-4">
@@ -254,7 +414,6 @@ function SignupPage() {
               </div>
             )}
             <div className="flex-1 space-y-2">
-              {/* Input caché pour caméra */}
               <Input
                 id="avatar-camera"
                 type="file"
@@ -263,7 +422,6 @@ function SignupPage() {
                 onChange={handleAvatarChange}
                 className="hidden"
               />
-              {/* Input caché pour galerie */}
               <Input
                 id="avatar-gallery"
                 type="file"
@@ -272,7 +430,6 @@ function SignupPage() {
                 className="hidden"
               />
               
-              {/* Bouton Prendre une photo */}
               <Button
                 type="button"
                 variant="default"
@@ -283,7 +440,6 @@ function SignupPage() {
                 Prendre une photo
               </Button>
               
-              {/* Bouton Choisir une photo */}
               <Button
                 type="button"
                 variant="outline"
@@ -299,6 +455,7 @@ function SignupPage() {
             </div>
           </div>
         </div>
+
         <Button type="submit" className="w-full rounded-full" size="lg" disabled={loading}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Créer mon compte

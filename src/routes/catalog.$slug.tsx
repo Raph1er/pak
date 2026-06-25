@@ -30,7 +30,9 @@ function ProductDetailPage() {
   const [product, setProduct] = useState<ProductRow | null | undefined>(undefined);
   const [items, setItems] = useState<ProductItemRow[]>([]);
   const [requestOpen, setRequestOpen] = useState(false);
-  const [hasRequested, setHasRequested] = useState(false);
+  const [lastRequestTime, setLastRequestTime] = useState<Date | null>(null);
+  const [canRequest, setCanRequest] = useState(true);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageScale, setImageScale] = useState(1);
 
@@ -53,14 +55,33 @@ function ProductDetailPage() {
           .order("position", { ascending: true });
         if (active) setItems(it ?? []);
       }
+      // Vérifier la dernière demande de l'utilisateur (tous produits confondus)
       if (active && p && isAuthenticated && user) {
-        const { data: existing } = await supabase
+        const { data: lastRequest } = await supabase
           .from("requests")
-          .select("id")
-          .eq("product_id", p.id)
+          .select("created_at")
           .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
           .maybeSingle();
-        if (active) setHasRequested(!!existing);
+
+        if (active && lastRequest) {
+          const lastDate = new Date(lastRequest.created_at);
+          setLastRequestTime(lastDate);
+
+          // Calculer le temps restant avant de pouvoir refaire une demande
+          const now = new Date();
+          const diffMs = now.getTime() - lastDate.getTime();
+          const cooldownMs = 5 * 60 * 1000; // 5 minutes en millisecondes
+
+          if (diffMs < cooldownMs) {
+            setCanRequest(false);
+            setCooldownSeconds(Math.ceil((cooldownMs - diffMs) / 1000));
+          } else {
+            setCanRequest(true);
+            setCooldownSeconds(0);
+          }
+        }
       }
     })();
     return () => {
@@ -68,6 +89,23 @@ function ProductDetailPage() {
     };
   }, [slug]);
 
+  // Timer pour le cooldown
+  useEffect(() => {
+    if (cooldownSeconds > 0) {
+      const timer = setInterval(() => {
+        setCooldownSeconds(prev => {
+          if (prev <= 1) {
+            setCanRequest(true);
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [cooldownSeconds]);
   const handleRequest = () => {
     if (!isAuthenticated) {
       toast.message("Connectez-vous pour faire une demande.");
@@ -78,8 +116,10 @@ function ProductDetailPage() {
       toast.error("Les administrateurs ne peuvent pas créer de demandes.");
       return;
     }
-    if (hasRequested) {
-      toast.error("Vous avez déjà fait une demande pour ce produit.");
+    if (!canRequest) {
+      const minutes = Math.floor(cooldownSeconds / 60);
+      const seconds = cooldownSeconds % 60;
+      toast.error(`Veuillez attendre ${minutes}m ${seconds}s avant de faire une nouvelle demande.`);
       return;
     }
     setRequestOpen(true);
@@ -172,16 +212,16 @@ function ProductDetailPage() {
 
         <div className="grid gap-10 lg:grid-cols-2">
           {/* Image avec click pour zoom */}
-          <div 
+          <div
             className="overflow-hidden rounded-3xl border border-border/60 bg-gradient-hero shadow-elegant cursor-pointer group relative"
             onClick={openImageModal}
           >
             <div className="aspect-[4/3] w-full relative">
               {product.image_url ? (
                 <>
-                  <img 
-                    src={product.image_url} 
-                    alt={product.title} 
+                  <img
+                    src={product.image_url}
+                    alt={product.title}
                     className="h-full w-full object-contain bg-white/5"
                     loading="lazy"
                   />
@@ -228,7 +268,7 @@ function ProductDetailPage() {
                   <Calendar className="h-4 w-4" />
                   Paiement échelonné
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="flex items-baseline justify-between border-b border-border/40 pb-3">
                     <span className="text-sm text-muted-foreground">Prix total</span>
@@ -299,8 +339,12 @@ function ProductDetailPage() {
             {!isAdmin && (
               <div className="mt-8 space-y-4">
                 <div className="flex flex-wrap gap-3">
-                  <Button size="lg" onClick={handleRequest} disabled={hasRequested}>
-                    Faire la demande
+                  <Button
+                    size="lg"
+                    onClick={handleRequest}
+                    disabled={!canRequest}
+                  >
+                    {canRequest ? "Faire la demande" : `Attendre ${Math.floor(cooldownSeconds / 60)}m ${cooldownSeconds % 60}s`}
                   </Button>
                   <Button asChild size="lg" variant="outline">
                     <Link
@@ -315,9 +359,22 @@ function ProductDetailPage() {
                   </Button>
                 </div>
 
-                {hasRequested && (
-                  <div className="rounded-3xl border border-border/60 bg-muted/5 p-5 text-sm text-muted-foreground">
-                    Vous avez déjà fait une demande pour ce produit. Notre équipe vous recontactera bientôt.
+                {!canRequest && (
+                  <div className="rounded-3xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 p-5 text-sm">
+                    <div className="flex items-start gap-3">
+                      <Calendar className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-medium text-amber-900 dark:text-amber-100">
+                          Délai d'attente en cours
+                        </p>
+                        <p className="mt-1 text-amber-700 dark:text-amber-300">
+                          Vous devez attendre <strong>{Math.floor(cooldownSeconds / 60)} minute{Math.floor(cooldownSeconds / 60) > 1 ? 's' : ''} et {cooldownSeconds % 60} seconde{cooldownSeconds % 60 > 1 ? 's' : ''}</strong> avant de pouvoir faire une nouvelle demande.
+                        </p>
+                        <p className="mt-2 text-xs text-amber-600/70 dark:text-amber-400/70">
+                          Cette règle s'applique à tous les produits pour éviter les abus.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -358,11 +415,11 @@ function ProductDetailPage() {
 
       {/* Modal d'image avec zoom */}
       {isImageModalOpen && product.image_url && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
           onClick={closeImageModal}
         >
-          <div 
+          <div
             className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
@@ -399,7 +456,7 @@ function ProductDetailPage() {
             </div>
 
             {/* Image avec zoom */}
-            <div 
+            <div
               className="overflow-auto max-h-[80vh] w-full flex items-center justify-center"
               style={{ cursor: 'grab' }}
             >
@@ -407,7 +464,7 @@ function ProductDetailPage() {
                 src={product.image_url}
                 alt={product.title}
                 className="transition-transform duration-200 object-contain max-h-[80vh] w-full"
-                style={{ 
+                style={{
                   transform: `scale(${imageScale})`,
                   transformOrigin: 'center center',
                 }}
