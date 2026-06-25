@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Loader2, Mail, Check } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Check, Phone } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
+import { emailToPhone } from "@/lib/email-to-phone";
 
 type ContactMessage = Database["public"]["Tables"]["contact_messages"]["Row"];
 
@@ -146,7 +147,10 @@ function AdminMessagesPage() {
                                                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                                                     <span>{message.full_name}</span>
                                                     <span>·</span>
-                                                    <span>{message.email}</span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Phone className="h-3 w-3" />
+                                                        {message.phone || emailToPhone(message.email)}
+                                                    </span>
                                                     <span>·</span>
                                                     <span>{new Date(message.created_at).toLocaleString()}</span>
                                                 </div>

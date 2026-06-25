@@ -3,7 +3,8 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
-import { Loader2, Package, ClipboardList, CreditCard, ArrowRight, Mail } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Package, ClipboardList, CreditCard, ArrowRight, Mail, Users } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — KIVA" }] }),
@@ -43,9 +44,15 @@ function AdminPage() {
           <p className="mt-3 max-w-xl text-muted-foreground">
             Pilotez le catalogue, suivez les demandes et gérez les paiements.
           </p>
-
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
+              {
+                to: "/admin/clients",
+                icon: Users,
+                title: "Clients",
+                label: "Gestion utilisateurs et membres",
+                live: true,
+              },
               {
                 to: "/admin/catalog",
                 icon: Package,
@@ -67,6 +74,13 @@ function AdminPage() {
                 label: "Questions non lues",
                 live: true,
               },
+                            {
+                to: "/admin/requests_pending",
+                icon: Package,
+                title: "À analyser",
+                label: "Demandes non traitées",
+                live: true,
+              },
               {
                 to: "/admin",
                 icon: CreditCard,
@@ -78,13 +92,28 @@ function AdminPage() {
               <Link
                 key={c.title}
                 to={c.to}
-                className="inline-flex min-w-[12rem] items-center gap-3 rounded-full border border-border/60 bg-background px-5 py-4 text-sm font-medium text-foreground transition hover:border-primary hover:text-primary"
+                className={`group relative flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-6 transition-all hover:border-primary hover:shadow-lg ${
+                  !c.live ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
-                <c.icon className="h-5 w-5 text-primary" />
-                <span>
-                  {c.title}
-                  <div className="text-xs text-muted-foreground">{c.label}</div>
-                </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                    <c.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  {c.live && (
+                    <Badge variant="secondary" className="text-xs">
+                      Actif
+                    </Badge>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{c.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{c.label}</p>
+                </div>
+                <div className="flex items-center gap-1 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                  Accéder
+                  <ArrowRight className="h-4 w-4" />
+                </div>
               </Link>
             ))}
           </div>
